@@ -233,11 +233,6 @@ static const uint32_t table_samp_time[] = {
 };
 #endif
 
-/* Bugfix for STM32G4 HAL */
-#if !defined(ADC_CHANNEL_TEMPSENSOR)
-#define ADC_CHANNEL_TEMPSENSOR ADC_CHANNEL_TEMPSENSOR_ADC1
-#endif
-
 /* External channels (maximum). */
 #define STM32_CHANNEL_COUNT		20
 
@@ -809,6 +804,11 @@ static int adc_stm32_channel_setup(const struct device *dev,
 	 defined(CONFIG_SOC_SERIES_STM32L0X)
 	struct adc_stm32_data *data = dev->data;
 #endif
+#if defined(CONFIG_SOC_SERIES_STM32G4X)
+	const struct adc_stm32_cfg *config = dev->config;
+	ADC_TypeDef *adc = config->base;
+#endif
+
 	int acq_time_index;
 
 	if (channel_cfg->channel_id >= STM32_CHANNEL_COUNT) {
@@ -849,11 +849,23 @@ static int adc_stm32_channel_setup(const struct device *dev,
 		return -EINVAL;
 	}
 
+#if defined(CONFIG_SOC_SERIES_STM32G4X)
+	/* In the G4 model, once can access internal temperature on ADCs 1 and 5 */
+	if ((adc == (ADC_TypeDef *)ADC1_BASE && __LL_ADC_CHANNEL_TO_DECIMAL_NB(ADC_CHANNEL_TEMPSENSOR_ADC1) == channel_cfg->channel_id) ||
+		(adc == (ADC_TypeDef *)ADC5_BASE && __LL_ADC_CHANNEL_TO_DECIMAL_NB(ADC_CHANNEL_TEMPSENSOR_ADC5) == channel_cfg->channel_id)) {
+		adc_stm32_set_common_path(dev, LL_ADC_PATH_INTERNAL_TEMPSENSOR);
+	}
+	/* In the G4 model, once can access internal reference voltage on all ADCs besides 2 */
+	else if (adc != (ADC_TypeDef *)ADC2_BASE && __LL_ADC_CHANNEL_TO_DECIMAL_NB(ADC_CHANNEL_VREFINT) == channel_cfg->channel_id) {
+		adc_stm32_set_common_path(dev, LL_ADC_PATH_INTERNAL_VREFINT);
+	}
+#else
 	if (__LL_ADC_CHANNEL_TO_DECIMAL_NB(ADC_CHANNEL_TEMPSENSOR) == channel_cfg->channel_id) {
 		adc_stm32_set_common_path(dev, LL_ADC_PATH_INTERNAL_TEMPSENSOR);
 	} else if (__LL_ADC_CHANNEL_TO_DECIMAL_NB(ADC_CHANNEL_VREFINT) == channel_cfg->channel_id) {
 		adc_stm32_set_common_path(dev, LL_ADC_PATH_INTERNAL_VREFINT);
 	}
+#endif
 
 	adc_stm32_setup_speed(dev, channel_cfg->channel_id,
 				  acq_time_index);
