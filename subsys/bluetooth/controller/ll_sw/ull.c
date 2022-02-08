@@ -1434,11 +1434,17 @@ void ll_rx_mem_release(void **node_rx)
 				/* pick the sync context before scan context
 				 * is cleanup of sync context association.
 				 */
-				sync = scan->per_scan.sync;
+				sync = scan->periodic.sync;
 
 				ull_sync_setup_complete(scan);
 
 				if (status != BT_HCI_ERR_SUCCESS) {
+					memq_link_t *link_sync_lost;
+
+					link_sync_lost =
+						sync->node_rx_lost.hdr.link;
+					ll_rx_link_release(link_sync_lost);
+
 					ull_sync_release(sync);
 				}
 

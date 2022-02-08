@@ -508,6 +508,10 @@ static int uart_stm32_poll_in(const struct device *dev, unsigned char *c)
 		LL_USART_ClearFlag_ORE(UartInstance);
 	}
 
+	/*
+	 * On stm32 F4X, F1X, and F2X, the RXNE flag is affected (cleared) by
+	 * the uart_err_check function call (on errors flags clearing)
+	 */
 	if (!LL_USART_IsActiveFlag_RXNE(UartInstance)) {
 		return -1;
 	}
@@ -570,9 +574,10 @@ static int uart_stm32_err_check(const struct device *dev)
 	USART_TypeDef *UartInstance = UART_STRUCT(dev);
 	uint32_t err = 0U;
 
-	/* Check for errors, but don't clear them here.
+	/* Check for errors, then clear them.
 	 * Some SoC clear all error flags when at least
-	 * one is cleared. (e.g. F4X, F1X, and F2X)
+	 * one is cleared. (e.g. F4X, F1X, and F2X).
+	 * The stm32 F4X, F1X, and F2X also reads the usart DR when clearing Errors
 	 */
 	if (LL_USART_IsActiveFlag_ORE(UartInstance)) {
 		err |= UART_ERROR_OVERRUN;
@@ -586,6 +591,20 @@ static int uart_stm32_err_check(const struct device *dev)
 		err |= UART_ERROR_FRAMING;
 	}
 
+#if !defined(CONFIG_SOC_SERIES_STM32F0X) || defined(USART_LIN_SUPPORT)
+	if (LL_USART_IsActiveFlag_LBD(UartInstance)) {
+		err |= UART_BREAK;
+	}
+
+	if (err & UART_BREAK) {
+		LL_USART_ClearFlag_LBD(UartInstance);
+	}
+#endif
+	/* Clearing error :
+	 * the stm32 F4X, F1X, and F2X sw sequence is reading the usart SR
+	 * then the usart DR to clear the Error flags ORE, PE, FE, NE
+	 * --> so is the RXNE flag also cleared !
+	 */
 	if (err & UART_ERROR_OVERRUN) {
 		LL_USART_ClearFlag_ORE(UartInstance);
 	}
@@ -597,7 +616,6 @@ static int uart_stm32_err_check(const struct device *dev)
 	if (err & UART_ERROR_FRAMING) {
 		LL_USART_ClearFlag_FE(UartInstance);
 	}
-
 	/* Clear noise error as well,
 	 * it is not represented by the errors enum
 	 */
@@ -660,6 +678,10 @@ static int uart_stm32_fifo_read(const struct device *dev, uint8_t *rx_data,
 		/* Clear overrun error flag */
 		if (LL_USART_IsActiveFlag_ORE(UartInstance)) {
 			LL_USART_ClearFlag_ORE(UartInstance);
+		/*
+		 * On stm32 F4X, F1X, and F2X, the RXNE flag is affected (cleared) by
+		 * the uart_err_check function call (on errors flags clearing)
+		 */
 		}
 	}
 
@@ -741,7 +763,10 @@ static void uart_stm32_irq_rx_disable(const struct device *dev)
 static int uart_stm32_irq_rx_ready(const struct device *dev)
 {
 	USART_TypeDef *UartInstance = UART_STRUCT(dev);
-
+	/*
+	 * On stm32 F4X, F1X, and F2X, the RXNE flag is affected (cleared) by
+	 * the uart_err_check function call (on errors flags clearing)
+	 */
 	return LL_USART_IsActiveFlag_RXNE(UartInstance);
 }
 
@@ -1329,7 +1354,8 @@ static int uart_stm32_async_tx_abort(const struct device *dev)
 
 static void uart_stm32_async_rx_timeout(struct k_work *work)
 {
-	struct uart_dma_stream *rx_stream = CONTAINER_OF(work,
+	struct k_work_delayable *dwork = k_work_delayable_from_work(work);
+	struct uart_dma_stream *rx_stream = CONTAINER_OF(dwork,
 			struct uart_dma_stream, timeout_work);
 	struct uart_stm32_data *data = CONTAINER_OF(rx_stream,
 			struct uart_stm32_data, dma_rx);
@@ -1346,7 +1372,8 @@ static void uart_stm32_async_rx_timeout(struct k_work *work)
 
 static void uart_stm32_async_tx_timeout(struct k_work *work)
 {
-	struct uart_dma_stream *tx_stream = CONTAINER_OF(work,
+	struct k_work_delayable *dwork = k_work_delayable_from_work(work);
+	struct uart_dma_stream *tx_stream = CONTAINER_OF(dwork,
 			struct uart_dma_stream, timeout_work);
 	struct uart_stm32_data *data = CONTAINER_OF(tx_stream,
 			struct uart_stm32_data, dma_tx);
