@@ -1,0 +1,6 @@
+board:
+  name: clear_core
+  full_name: Teknic ClearCore Motion Controller
+  vendor: teknic
+  socs:
+    - name: same53n19a
