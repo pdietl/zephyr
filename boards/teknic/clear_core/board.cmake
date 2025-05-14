@@ -1,4 +1,6 @@
-# Copyright (c) 2018 Bryan O'Donoghue
 # SPDX-License-Identifier: Apache-2.0
 
-include(${ZEPHYR_BASE}/boards/common/openocd.board.cmake)
+board_runner_args(jlink "--device=atsam4s16c" "--speed=4000")
+include(${ZEPHYR_BASE}/boards/common/jlink.board.cmake)
+
+include(${ZEPHYR_BASE}/boards/common/bossac.board.cmake)

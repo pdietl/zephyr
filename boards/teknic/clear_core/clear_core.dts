@@ -19,26 +19,27 @@
 		zephyr,shell-uart = &sercom3;
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
 	};
 
 	/* These aliases are provided for compatibility with samples */
 	aliases {
-		/*
 		led0 = &led0;
+		/*
 		pwm-led0 = &pwm_led0;
 		sw0 = &button0;
 		i2c-0 = &sercom7;
 		*/
 	};
-/*
+
 	leds {
 		compatible = "gpio-leds";
 		led0: led_0 {
-			gpios = <&portc 18 GPIO_ACTIVE_LOW>;
-			label = "Yellow LED";
+			gpios = <&shift_reg_gpios 16 GPIO_ACTIVE_HIGH>;
+			label = "Red user LED";
 		};
 	};
-
+/*
 	pwmleds {
 		compatible = "pwm-leds";
 		pwm_led0: pwm_led_0 {
@@ -146,6 +147,29 @@ zephyr_udc0: &usb0 {
 
 */
 
+&sercom6 {
+	status = "okay";
+	compatible = "atmel,sam0-spi";
+	dopo = <2>;
+	dipo = <2>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pinctrl-0 = <&sercom6_spi_default>;
+	pinctrl-names = "default";
+
+	shift_reg_gpios: shift_reg_gpios@0 {
+        status = "okay";
+		compatible = "ti,sn74hc595";
+        reset-gpios = <&portb 1 GPIO_ACTIVE_HIGH>;
+		ngpios = <32>;
+		reg = <0>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		spi-max-frequency = <100000000>;
+	};
+};
+
 &flash0 {
 	partitions {
 		compatible = "fixed-partitions";
@@ -153,13 +177,20 @@ zephyr_udc0: &usb0 {
 		#size-cells = <1>;
 
 		/*
-		 * The final 16 KiB is reserved for the application.
-		 * Storage partition will be used by FCB/LittleFS/NVS
-		 * if enabled.
+		 * The first half of sector 0 (64 kbytes)
+		 * is reserved for the bootloader
 		 */
-		storage_partition: partition@fc000 {
-			label = "storage";
-			reg = <0x000fc000 0x00004000>;
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x0 0x00040000>;
+			read-only;
 		};
+
+		/* From sector 1 to sector 7 (included): slot0 (896 kbytes) */
+		slot0_partition: partition@40000 {
+			label = "app-image";
+			reg = <0x00040000 0x0007c000>;
+		};
+
 	};
 };
