@@ -12,6 +12,14 @@
 				 <PB21C_SERCOM3_PAD1>;
 		};
 	};
+
+	sercom6_spi_default: sercom6_spi_default {
+		group1 {
+			pinmux = <PC5C_SERCOM6_PAD1>,
+				 <PC6C_SERCOM6_PAD2>,
+				 <PC7C_SERCOM6_PAD3>;
+		};
+	};
 /*
 	pwm_default: pwm_default {
 		group1 {

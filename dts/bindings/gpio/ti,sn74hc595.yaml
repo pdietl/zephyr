@@ -16,7 +16,6 @@ properties:
   ngpios:
     type: int
     required: true
-    const: 8
     description: Number of supported gpios
 
   "#gpio-cells":
