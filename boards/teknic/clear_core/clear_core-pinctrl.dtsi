@@ -6,10 +6,10 @@
 #include <dt-bindings/pinctrl/same53n-pinctrl.h>
 
 &pinctrl {
-	sercom3_uart_default: sercom3_uart_default {
+	sercom7_uart_default: sercom7_uart_default {
 		group1 {
-			pinmux = <PB20C_SERCOM3_PAD0>,
-				 <PB21C_SERCOM3_PAD1>;
+			pinmux = <PB20D_SERCOM7_PAD1>,
+				 <PB21D_SERCOM7_PAD0>;
 		};
 	};
 
