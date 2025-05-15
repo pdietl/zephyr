@@ -38,7 +38,7 @@ struct gpio_sn74hc595_drv_data {
 	struct gpio_driver_data data;
 
 	struct k_mutex lock;
-	uint8_t output;
+	uint32_t output;
 };
 
 static int sn74hc595_spi_write(const struct device *dev, void *buf, size_t len_bytes)
@@ -48,8 +48,8 @@ static int sn74hc595_spi_write(const struct device *dev, void *buf, size_t len_b
 	__ASSERT(((buf != NULL) || (len_bytes == 0)), "no valid buffer given");
 	__ASSERT(!k_is_in_isr(), "attempt to access SPI from ISR");
 
-	struct spi_buf tx_buf[] = { { .buf = buf, .len = len_bytes } };
-	const struct spi_buf_set tx = { .buffers = tx_buf, .count = 1 };
+	struct spi_buf tx_buf[] = {{.buf = buf, .len = len_bytes}};
+	const struct spi_buf_set tx = {.buffers = tx_buf, .count = 1};
 
 	return spi_write_dt(&config->bus, &tx);
 }
@@ -80,7 +80,7 @@ static int gpio_sn74hc595_port_set_masked_raw(const struct device *dev, uint32_t
 {
 	struct gpio_sn74hc595_drv_data *drv_data = dev->data;
 	int ret = 0;
-	uint8_t output;
+	uint32_t output;
 
 	k_mutex_lock(&drv_data->lock, K_FOREVER);
 
@@ -89,7 +89,7 @@ static int gpio_sn74hc595_port_set_masked_raw(const struct device *dev, uint32_t
 	if ((drv_data->output & mask) != (mask & value)) {
 		output = (drv_data->output & ~mask) | (mask & value);
 
-		ret = sn74hc595_spi_write(dev, &output, 1U);
+		ret = sn74hc595_spi_write(dev, &output, sizeof(output));
 		if (ret < 0) {
 			goto unlock;
 		}
@@ -116,13 +116,13 @@ static int gpio_sn74hc595_port_toggle_bits(const struct device *dev, uint32_t ma
 {
 	struct gpio_sn74hc595_drv_data *drv_data = dev->data;
 	int ret;
-	uint8_t toggled_output;
+	uint32_t toggled_output;
 
 	k_mutex_lock(&drv_data->lock, K_FOREVER);
 
 	toggled_output = drv_data->output ^ mask;
 
-	ret = sn74hc595_spi_write(dev, &toggled_output, 1U);
+	ret = sn74hc595_spi_write(dev, &toggled_output, sizeof(toggled_output));
 	if (ret < 0) {
 		goto unlock;
 	}
@@ -175,26 +175,26 @@ static int gpio_sn74hc595_init(const struct device *dev)
 	return 0;
 }
 
-#define SN74HC595_SPI_OPERATION									\
+#define SN74HC595_SPI_OPERATION                                                                    \
 	((uint16_t)(SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8)))
 
-#define SN74HC595_INIT(n)									\
-	static struct gpio_sn74hc595_drv_data sn74hc595_data_##n = {				\
-		.output = 0,									\
-		.lock = Z_MUTEX_INITIALIZER(sn74hc595_data_##n.lock),				\
-	};											\
-												\
-	static const struct gpio_sn74hc595_config sn74hc595_config_##n = {			\
-		.config = {									\
-			.port_pin_mask =							\
-				GPIO_PORT_PIN_MASK_FROM_DT_INST(n),				\
-		},										\
-		.bus = SPI_DT_SPEC_INST_GET(n, SN74HC595_SPI_OPERATION, 0),			\
-		.reset_gpio = GPIO_DT_SPEC_INST_GET(n, reset_gpios),				\
-	};											\
-												\
-	DEVICE_DT_DEFINE(DT_DRV_INST(n), &gpio_sn74hc595_init, NULL,				\
-			 &sn74hc595_data_##n, &sn74hc595_config_##n, POST_KERNEL,		\
-			 CONFIG_GPIO_SN74HC595_INIT_PRIORITY, &gpio_sn74hc595_drv_api_funcs);
+#define SN74HC595_INIT(n)                                                                          \
+	static struct gpio_sn74hc595_drv_data sn74hc595_data_##n = {                               \
+		.output = 0,                                                                       \
+		.lock = Z_MUTEX_INITIALIZER(sn74hc595_data_##n.lock),                              \
+	};                                                                                         \
+                                                                                                   \
+	static const struct gpio_sn74hc595_config sn74hc595_config_##n = {                         \
+		.config =                                                                          \
+			{                                                                          \
+				.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_DT_INST(n),               \
+			},                                                                         \
+		.bus = SPI_DT_SPEC_INST_GET(n, SN74HC595_SPI_OPERATION, 0),                        \
+		.reset_gpio = GPIO_DT_SPEC_INST_GET(n, reset_gpios),                               \
+	};                                                                                         \
+                                                                                                   \
+	DEVICE_DT_DEFINE(DT_DRV_INST(n), &gpio_sn74hc595_init, NULL, &sn74hc595_data_##n,          \
+			 &sn74hc595_config_##n, POST_KERNEL, CONFIG_GPIO_SN74HC595_INIT_PRIORITY,  \
+			 &gpio_sn74hc595_drv_api_funcs);
 
 DT_INST_FOREACH_STATUS_OKAY(SN74HC595_INIT)

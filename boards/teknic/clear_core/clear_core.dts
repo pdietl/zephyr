@@ -15,8 +15,8 @@
 	compatible = "teknic,clear_core";
 
 	chosen {
-		zephyr,console = &sercom3;
-		zephyr,shell-uart = &sercom3;
+		zephyr,console = &sercom7;
+		zephyr,shell-uart = &sercom7;
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &slot0_partition;
@@ -34,8 +34,14 @@
 
 	leds {
 		compatible = "gpio-leds";
+        /*
 		led0: led_0 {
 			gpios = <&shift_reg_gpios 16 GPIO_ACTIVE_HIGH>;
+			label = "Red user LED";
+		};
+        */
+		led0: led_0 {
+			gpios = <&porta 1 GPIO_ACTIVE_LOW>;
 			label = "Red user LED";
 		};
 	};
@@ -83,7 +89,7 @@
 
 */
 
-&sercom3 {
+&sercom7 {
 	status = "okay";
 	compatible = "atmel,sam0-uart";
 	current-speed = <115200>;
@@ -92,9 +98,10 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 
-	pinctrl-0 = <&sercom3_uart_default>;
+	pinctrl-0 = <&sercom7_uart_default>;
 	pinctrl-names = "default";
 };
+
 /*
 &sercom1 {
 	status = "okay";
@@ -182,14 +189,14 @@ zephyr_udc0: &usb0 {
 		 */
 		boot_partition: partition@0 {
 			label = "mcuboot";
-			reg = <0x0 0x00040000>;
+			reg = <0x0 0x00004000>;
 			read-only;
 		};
 
 		/* From sector 1 to sector 7 (included): slot0 (896 kbytes) */
-		slot0_partition: partition@40000 {
+		slot0_partition: partition@4000 {
 			label = "app-image";
-			reg = <0x00040000 0x0007c000>;
+			reg = <0x00004000 0x0080000>;
 		};
 
 	};
