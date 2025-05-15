@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+cmd_file=$(mktemp)
+
+cat >"$cmd_file" <<END
+  SelectInterface SWD
+  Speed auto
+  Connect
+  Loadfile "$1" 0x4000
+  Exit
+END
+
+err=0
+
+if ! JLinkExe -NoGui 1 -device atsame53n19a -CommandFile "$cmd_file"; then
+	err=$?
+	echo "JLinkExe exited with error code $err"
+fi
+
+rm "$cmd_file"
+
+exit $err
