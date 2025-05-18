@@ -8,6 +8,10 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 
+#define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
+
+const struct gpio_dt_spec out1_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, output1_gpios);
+const struct gpio_dt_spec out2_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, output2_gpios);
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS 1000
 
@@ -28,14 +32,36 @@ int main(void)
 	if (!gpio_is_ready_dt(&led)) {
 		return 0;
 	}
+	if (!gpio_is_ready_dt(&out1_gpio)) {
+		return 0;
+	}
+	if (!gpio_is_ready_dt(&out2_gpio)) {
+		return 0;
+	}
 
-	ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
+	ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
+	if (ret < 0) {
+		return 0;
+	}
+	ret = gpio_pin_configure_dt(&out1_gpio, GPIO_OUTPUT_ACTIVE);
+	if (ret < 0) {
+		return 0;
+	}
+	ret = gpio_pin_configure_dt(&out2_gpio, GPIO_OUTPUT_ACTIVE);
 	if (ret < 0) {
 		return 0;
 	}
 
 	for (unsigned i = 0;; i++) {
 		ret = gpio_pin_toggle_dt(&led);
+		if (ret < 0) {
+			return 0;
+		}
+		ret = gpio_pin_toggle_dt(&out1_gpio);
+		if (ret < 0) {
+			return 0;
+		}
+		ret = gpio_pin_toggle_dt(&out2_gpio);
 		if (ret < 0) {
 			return 0;
 		}

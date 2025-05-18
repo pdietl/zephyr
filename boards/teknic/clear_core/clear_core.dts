@@ -32,16 +32,15 @@
 		*/
 	};
 
+	zephyr,user {
+		output1-gpios = <&porta 1 GPIO_ACTIVE_HIGH>;
+		output2-gpios = <&porta 6 GPIO_ACTIVE_HIGH>;
+	};
+
 	leds {
 		compatible = "gpio-leds";
-        /*
 		led0: led_0 {
-			gpios = <&shift_reg_gpios 16 GPIO_ACTIVE_HIGH>;
-			label = "Red user LED";
-		};
-        */
-		led0: led_0 {
-			gpios = <&porta 1 GPIO_ACTIVE_LOW>;
+			gpios = <&shift_reg_gpios 4 GPIO_ACTIVE_HIGH>;
 			label = "Red user LED";
 		};
 	};
@@ -92,7 +91,7 @@
 &sercom7 {
 	status = "okay";
 	compatible = "atmel,sam0-uart";
-	current-speed = <115200>;
+	current-speed = <9600>;
 	rxpo = <1>;
 	txpo = <0>;
 	#address-cells = <1>;
@@ -166,14 +165,17 @@ zephyr_udc0: &usb0 {
 	pinctrl-names = "default";
 
 	shift_reg_gpios: shift_reg_gpios@0 {
-        status = "okay";
-		compatible = "ti,sn74hc595";
-        reset-gpios = <&portb 1 GPIO_ACTIVE_HIGH>;
-		ngpios = <32>;
-		reg = <0>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		spi-max-frequency = <100000000>;
+		status = "okay";
+			compatible = "ti,sn74hc595";
+			//reset-value = <0x0f0007f0>;
+			reset-value = <0xffffffff>;
+			rclk-gpios = <&portb 2 GPIO_ACTIVE_HIGH>;
+			enable-gpios = <&portb 1 GPIO_ACTIVE_LOW>;
+			ngpios = <32>;
+			reg = <0>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			spi-max-frequency = <100000>;
 	};
 };
 
@@ -183,17 +185,12 @@ zephyr_udc0: &usb0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-		/*
-		 * The first half of sector 0 (64 kbytes)
-		 * is reserved for the bootloader
-		 */
 		boot_partition: partition@0 {
 			label = "mcuboot";
 			reg = <0x0 0x00004000>;
 			read-only;
 		};
 
-		/* From sector 1 to sector 7 (included): slot0 (896 kbytes) */
 		slot0_partition: partition@4000 {
 			label = "app-image";
 			reg = <0x00004000 0x0080000>;

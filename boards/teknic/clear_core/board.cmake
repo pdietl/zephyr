@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 board_runner_args(jlink "--device=atsame51n19a" "--speed=4000")
-include(${ZEPHYR_BASE}/boards/common/jlink.board.cmake)
 
+# Since this one is first, it will be the default
 include(${ZEPHYR_BASE}/boards/common/bossac.board.cmake)
+
+include(${ZEPHYR_BASE}/boards/common/jlink.board.cmake)
