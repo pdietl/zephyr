@@ -58,17 +58,16 @@ static int sn74hc595_write(const struct device *dev, uint32_t value)
 	const struct gpio_sn74hc595_config *config = dev->config;
 
 	__ASSERT(!k_is_in_isr(), "attempt to access SPI from ISR");
-	/*
-		value = sys_cpu_to_be32(value
-					<< (BITS_PER_BYTE * (sizeof(uint32_t) -
-	   config->num_registers)));
-					*/
 
-	struct gpio_sn74hc595_drv_data *drv_data = dev->data;
-	drv_data->output = value;
+	LOG_ERR("[%p] Value argument: 0x%08x", dev, value);
+	LOG_HEXDUMP_WRN(&value, sizeof value, "Value argument");
 
-	struct spi_buf tx_buf[] = {
-		{.buf = (uint8_t *)&drv_data->output, .len = config->num_registers}};
+	value = sys_cpu_to_be32(value
+				<< (BITS_PER_BYTE * (sizeof(uint32_t) - config->num_registers)));
+
+	LOG_HEXDUMP_WRN(&value, sizeof value, "Value big endian");
+
+	struct spi_buf tx_buf[] = {{.buf = (uint8_t *)&value, .len = config->num_registers}};
 	const struct spi_buf_set tx = {.buffers = tx_buf, .count = 1};
 
 	ret = spi_write_dt(&config->bus, &tx);
@@ -81,6 +80,7 @@ static int sn74hc595_write(const struct device *dev, uint32_t value)
 		if (ret < 0) {
 			return ret;
 		}
+		k_msleep(10);
 		return gpio_pin_set_dt(&config->rclk_gpio, 0);
 	}
 
@@ -115,12 +115,15 @@ static int gpio_sn74hc595_port_set_masked_raw(const struct device *dev, uint32_t
 	int ret = 0;
 	uint32_t output;
 
+	LOG_ERR("mask: 0x%08x, value: 0x%08x", mask, value);
+
 	k_mutex_lock(&drv_data->lock, K_FOREVER);
 
 	/* check if we need to do something at all      */
 	/* current output differs from new masked value */
 	if ((drv_data->output & mask) != (mask & value)) {
 		output = (drv_data->output & ~mask) | (mask & value);
+		LOG_ERR("output = (drv_data->output & ~mask) | (mask & value): 0x%08x", output);
 
 		ret = sn74hc595_write(dev, output);
 		if (ret < 0) {
@@ -150,6 +153,8 @@ static int gpio_sn74hc595_port_toggle_bits(const struct device *dev, uint32_t ma
 	struct gpio_sn74hc595_drv_data *drv_data = dev->data;
 	int ret;
 	uint32_t toggled_output;
+
+	LOG_WRN("[%p] Toggle bits mask: 0x%08x", dev, mask);
 
 	k_mutex_lock(&drv_data->lock, K_FOREVER);
 
@@ -213,16 +218,6 @@ static int gpio_sn74hc595_init(const struct device *dev)
 			LOG_ERR("Unable to configure RST GPIO pin %u", config->enable_gpio.pin);
 			return -EINVAL;
 		}
-	}
-
-	sn74hc595_write(dev, 0);
-	sn74hc595_write(dev, 0xffffffff);
-	sn74hc595_write(dev, 0);
-	sn74hc595_write(dev, 0xffffffff);
-
-	for (uint32_t i = 0; i < 32; ++i) {
-		sn74hc595_write(dev, 1 << i);
-		k_msleep(1000);
 	}
 
 	// Don't call `gpio_sn74hc595_port_toggle_bits` since it compares its argument to
