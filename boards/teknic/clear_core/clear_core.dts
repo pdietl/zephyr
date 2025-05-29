@@ -6,11 +6,10 @@
  */
 
 /dts-v1/;
+#include <freq.h>
 #include <atmel/same5xx19.dtsi>
 #include "clear_core-pinctrl.dtsi"
 #include <zephyr/dt-bindings/input/input-event-codes.h>
-
-#include <../samples/basic/blinky/src/config.h>
 
 / {
 	model = "Teknic ClearCore";
@@ -26,9 +25,7 @@
 
 	/* These aliases are provided for compatibility with samples */
 	aliases {
-		#ifndef MANUAL_CLOCKING
 		led0 = &led0;
-		#endif
 		/*
 		pwm-led0 = &pwm_led0;
 		sw0 = &button0;
@@ -36,30 +33,11 @@
 		*/
 	};
 
-	zephyr,user {
-		output1-gpios = <&porta 1 GPIO_ACTIVE_HIGH>;
-		output2-gpios = <&porta 6 GPIO_ACTIVE_HIGH>;
-		#ifdef MANUAL_CLOCKING
-
-		sr-load-gpios = <&portb 2 GPIO_ACTIVE_HIGH>;
-		sr-enable-gpios = <&portb 1 GPIO_ACTIVE_LOW>;
-		sr-data-gpios = <&portc 7 GPIO_ACTIVE_HIGH>;
-		sr-clock-gpios = <&portc 5 GPIO_ACTIVE_HIGH>;
-
-		#endif
-	};
-
 	leds {
 		compatible = "gpio-leds";
-#ifndef MANUAL_CLOCKING
 		led0: led_0 {
 			gpios = <&shift_reg_gpios 4 GPIO_ACTIVE_HIGH>;
 			label = "Red user LED";
-		};
-#endif
-		led_comport1: led_comport1 {
-			gpios = <&comport_shift_reg_gpios 4 GPIO_ACTIVE_HIGH>;
-			label = "Fake user LED";
 		};
 	};
 /*
@@ -82,7 +60,7 @@
 };
 
 &cpu0 {
-	clock-frequency = <120000000>;
+	clock-frequency = <DT_FREQ_M(120)>;
 };
 /*
 &tcc0 {
@@ -171,8 +149,6 @@ zephyr_udc0: &usb0 {
 
 */
 
-#ifndef MANUAL_CLOCKING
-
 &sercom6 {
 	status = "okay";
 	compatible = "atmel,sam0-spi";
@@ -186,46 +162,17 @@ zephyr_udc0: &usb0 {
 
 	shift_reg_gpios: shift_reg_gpios@0 {
 		status = "okay";
-			compatible = "ti,sn74hc595";
-			//reset-value = <0x0f0007f0>;
-			reset-value = <0xffffffff>;
-			rclk-gpios = <&portb 2 GPIO_ACTIVE_HIGH>;
-			enable-gpios = <&portb 1 GPIO_ACTIVE_LOW>;
-			//ngpios = <32>;
-			ngpios = <8>;
-			reg = <0>;
-			gpio-controller;
-			#gpio-cells = <2>;
-			spi-max-frequency = <10>;
+		compatible = "ti,sn74hc595";
+		reset-value = <0x0f0007f0>;
+		rclk-gpios = <&portb 2 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&portb 1 GPIO_ACTIVE_LOW>;
+		ngpios = <32>;
+		reg = <0>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		spi-max-frequency = <DT_FREQ_M(25)>;
 	};
 };
-#endif
-
-&sercom0 {
-	status = "okay";
-	compatible = "atmel,sam0-spi";
-	dopo = <0>;
-	dipo = <3>;
-	#address-cells = <1>;
-	#size-cells = <0>;
-
-	pinctrl-0 = <&sercom0_spi_default>;
-	pinctrl-names = "default";
-
-	comport_shift_reg_gpios: comport_shift_reg_gpios@0 {
-		status = "okay";
-			compatible = "ti,sn74hc595";
-			reset-value = <0x0f0007f0>;
-			//rclk-gpios = <&portb 2 GPIO_ACTIVE_HIGH>;
-			//enable-gpios = <&portb 1 GPIO_ACTIVE_LOW>;
-			ngpios = <32>;
-			reg = <0>;
-			gpio-controller;
-			#gpio-cells = <2>;
-			spi-max-frequency = <10>;
-	};
-};
-
 
 &flash0 {
 	partitions {

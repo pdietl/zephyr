@@ -77,6 +77,8 @@ static int spi_sam0_configure(const struct device *dev,
 	SercomSpi *regs = cfg->regs;
 	SERCOM_SPI_CTRLA_Type ctrla = {.reg = 0};
 	SERCOM_SPI_CTRLB_Type ctrlb = {.reg = 0};
+	SERCOM_SPI_CTRLC_Type ctrlc = {.reg = 0};
+	SERCOM_SPI_LENGTH_Type length = {.reg = 0};
 	int div;
 
 	if (spi_context_configured(&data->ctx, config)) {
@@ -129,18 +131,29 @@ static int spi_sam0_configure(const struct device *dev,
 	div = (SOC_ATMEL_SAM0_GCLK0_FREQ_HZ / config->frequency) / 2U - 1;
 	div = CLAMP(div, 0, UINT8_MAX);
 
+	/* LENGTH.LEN must only be enabled when CTRLC.bit.DATA32B is enabled.
+	 * Since we are about to explicitly disable it, we need to clear the LENGTH register.
+	 */
+	length.reg = SERCOM_SPI_LENGTH_RESETVALUE;
+
+	/* Disable inter-character spacing and the 32-bit read/write extension */
+	ctrlc.reg = SERCOM_SPI_CTRLC_RESETVALUE;
+
 	/* Update the configuration only if it has changed */
 	if (regs->CTRLA.reg != ctrla.reg || regs->CTRLB.reg != ctrlb.reg ||
-	    regs->BAUD.reg != div) {
+	    regs->BAUD.reg != div || regs->LENGTH.reg != length.reg || regs->CTRLC.reg != ctrlc.reg) {
 		regs->CTRLA.bit.ENABLE = 0;
 		wait_synchronization(regs);
-
 		regs->CTRLB = ctrlb;
 		wait_synchronization(regs);
 		regs->BAUD.reg = div;
 		wait_synchronization(regs);
 		regs->CTRLA = ctrla;
 		wait_synchronization(regs);
+		regs->LENGTH = length;
+		wait_synchronization(regs);
+		/* Although CTRLC is not write-synchronized, it is enabled-protected */
+		regs->CTRLC = ctrlc;
 	}
 
 	data->ctx.config = config;
@@ -656,6 +669,9 @@ static int spi_sam0_init(const struct device *dev)
 			  | GCLK_CLKCTRL_GEN(cfg->gclk_gen)
 			  | GCLK_CLKCTRL_ID(cfg->gclk_id);
 #endif
+
+	regs->CTRLA.bit.SWRST = 1;
+	wait_synchronization(regs);
 
 	/* Disable all SPI interrupts */
 	regs->INTENCLR.reg = SERCOM_SPI_INTENCLR_MASK;
