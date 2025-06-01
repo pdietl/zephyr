@@ -1,0 +1,176 @@
+/*
+ # Copyright (c) 2025 Pete Dietl <petedietl@gmail.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <freq.h>
+#include <atmel/same5xx19.dtsi>
+#include "clear_core-pinctrl.dtsi"
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+
+#define USE_COM0_AS_CONSOLE
+
+/ {
+	model = "Teknic ClearCore";
+	compatible = "teknic,clear_core";
+
+	chosen {
+		/* You can use COM0, COM1, or the USB device as the console
+		*  Have a look at the USB console sample in ./samples/subsys/usb/console.
+		*  Building that project will automatically override zephyr,console as defined
+		*  here.
+		*/
+#ifdef USE_COM1_AS_CONSOLE
+		zephyr,console = &sercom0;
+		zephyr,shell-uart = &sercom0;
+#elif defined (USE_COM0_AS_CONSOLE)
+		zephyr,console = &sercom7;
+		zephyr,shell-uart = &sercom7;
+#endif
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+	};
+
+	aliases {
+		/* These aliases are provided for compatibility with samples */
+		led0 = &led0; /* The red User LED */
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		led0: led_0 {
+			/* If you consider the outputs of all the linked shift registers
+			 * as starting collectively at index 0 and continuing to index 31,
+		         * then output Q0 of the third shift register is index 16.
+			 * Hence, the User LED is on GPIO pin 16.
+			 */
+			gpios = <&shift_reg_gpios 16 GPIO_ACTIVE_HIGH>;
+			label = "Red user LED";
+		};
+	};
+};
+
+&cpu0 {
+	clock-frequency = <DT_FREQ_M(120)>;
+};
+
+#ifdef USE_COM0_AS_CONSOLE
+/* Configuration for COM0 configured as UART without hardware flow control */
+&sercom7 {
+	status = "okay";
+	compatible = "atmel,sam0-uart";
+	current-speed = <115200>;
+	rxpo = <1>;
+	txpo = <0>;
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pinctrl-0 = <&sercom7_uart_or_spi_default>;
+	pinctrl-names = "default";
+};
+#endif
+
+#ifdef USE_COM1_AS_CONSOLE
+/* Configuration for COM1 configured as UART without hardware flow control */
+&sercom0 {
+	status = "okay";
+	compatible = "atmel,sam0-uart";
+	current-speed = <115200>;
+	rxpo = <1>;
+	txpo = <0>;
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pinctrl-0 = <&sercom0_uart_or_spi_default>;
+	pinctrl-names = "default";
+};
+#endif
+
+/* Configuration for sercom6 as a SPI controller used to control
+ * four linked 8-bit shift registers.
+ */
+&sercom6 {
+	status = "okay";
+	compatible = "atmel,sam0-spi";
+	dopo = <2>;
+	dipo = <2>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pinctrl-0 = <&sercom6_spi_default>;
+	pinctrl-names = "default";
+
+	shift_reg_gpios: shift_reg_gpios@0 {
+		status = "okay";
+		compatible = "ti,sn74hc595";
+		reset-value = <0x0f0007f0>;
+		rclk-gpios = <&portb 2 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&portb 1 GPIO_ACTIVE_LOW>;
+		ngpios = <32>;
+		reg = <0>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		spi-max-frequency = <DT_FREQ_M(25)>;
+	};
+};
+
+/* Ethernet config */
+&gmac {
+	status = "okay";
+
+	pinctrl-0 = <&gmac_rmii>;
+	pinctrl-names = "default";
+
+	phy-handle = <&phy>;
+};
+
+/* Ethernet config */
+&mdio {
+	status = "okay";
+
+	pinctrl-0 = <&mdio_default>;
+	pinctrl-names = "default";
+
+	phy: ethernet-phy@0 {
+		compatible = "ethernet-phy";
+		status = "okay";
+		reg = <0>;
+	};
+};
+
+/* The USB type-B port */
+zephyr_udc0: &usb0 {
+	status = "okay";
+
+	pinctrl-0 = <&usb_dc_default>;
+	pinctrl-names = "default";
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* This bootloader is provided by Microchip by default.
+		 * By default this section of flash is marked as "bootloader"
+		 * in the flash controller and cannot be written.
+		 */
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x0 0x00004000>;
+			read-only;
+		};
+
+		slot0_partition: partition@4000 {
+			label = "app-image";
+			reg = <0x00004000 0x0080000>;
+		};
+
+	};
+};
