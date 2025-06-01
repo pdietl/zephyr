@@ -1,0 +1,68 @@
+/*
+ * Copyright (c) 2022, Gerson Fernando Budke <nandojve@gmail.com>
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <dt-bindings/pinctrl/same53n-pinctrl.h>
+
+&pinctrl {
+	sercom7_uart_or_spi_default: sercom7_uart_or_spi_default {
+		group1 {                               /* | UART mode | SPI mode | */
+						       /* |----------------------| */
+			pinmux = <PB21D_SERCOM7_PAD0>, /* |    TX     |  MOSI    | */
+				 <PB20D_SERCOM7_PAD1>, /* |    RX     |  SCK     | */
+				 <PB18D_SERCOM7_PAD2>, /* |    RTS    |  SS      | */
+				 <PB19D_SERCOM7_PAD3>; /* |    CTS    |  MISO    | */
+						       /* |----------------------| */
+		};
+	};
+
+	sercom0_uart_or_spi_default: sercom0_uart_or_spi_default {
+		group1 {                               /* | UART mode | SPI mode | */
+						       /* |----------------------| */
+			pinmux = <PA8C_SERCOM0_PAD0>,  /* |    TX     |  MOSI    | */
+				 <PA9C_SERCOM0_PAD1>,  /* |    RX     |  SCK     | */
+				 <PA10C_SERCOM0_PAD2>, /* |    RTS    |  SS      | */
+				 <PA11C_SERCOM0_PAD3>; /* |    CTS    |  MISO    | */
+						       /* |----------------------| */
+		};
+	};
+
+	sercom6_spi_default: sercom6_spi_default {
+		group1 {
+			pinmux = <PC5C_SERCOM6_PAD1>, /* SCK  */
+				 <PC6C_SERCOM6_PAD2>, /* MISO */
+				 <PC7C_SERCOM6_PAD3>; /* MOSI */
+		};
+	};
+
+	/* For Ethernet connector */
+	gmac_rmii: gmac_rmii {
+		group1 {
+			pinmux = <PA14L_GMAC_GTXCK>,
+				 <PA17L_GMAC_GTXEN>,
+				 <PA18L_GMAC_GTX0>,
+				 <PA19L_GMAC_GTX1>,
+				 <PC20L_GMAC_GRXDV>,
+				 <PA13L_GMAC_GRX0>,
+				 <PA12L_GMAC_GRX1>,
+				 <PA15L_GMAC_GRXER>;
+		};
+	};
+
+	/* For Ethernet connector */
+	mdio_default: mdio_default {
+		group1 {
+			pinmux = <PC11L_GMAC_GMDC>,
+				 <PC12L_GMAC_GMDIO>;
+		};
+	};
+
+	/* To be a USB device controller (dc) for the USB type-B connector */
+	usb_dc_default: usb_dc_default {
+		group1 {
+			pinmux = <PA25H_USB_DP>,
+				 <PA24H_USB_DM>;
+		};
+	};
+};

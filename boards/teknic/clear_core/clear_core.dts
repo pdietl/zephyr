@@ -1,0 +1,213 @@
+/*
+ # Copyright (c) 2025 Pete Dietl <petedietl@gmail.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <freq.h>
+#include <atmel/same5xx19.dtsi>
+#include "clear_core-pinctrl.dtsi"
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+
+/ {
+	model = "Teknic ClearCore";
+	compatible = "teknic,clear_core";
+
+	chosen {
+		/* You can use COM0, COM1, or the USB device as the console
+		*  Have a look at the USB console sample in ./samples/subsys/usb/console.
+		*  Building that project will automatically override zephyr,console as defined
+		*  here.
+		*/
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+	};
+
+	aliases {
+		/* These aliases are provided for compatibility with samples */
+		led0 = &led_user; /* The red User LED */
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		led_user: led_user {
+			/* If you consider the outputs of all the linked shift registers
+			 * as starting collectively at index 0 and continuing to index 31,
+		         * then output Q0 of the third shift register is index 16.
+			 * Hence, the User LED is on GPIO pin 16.
+			 */
+			gpios = <&shift_reg_gpios 16 GPIO_ACTIVE_HIGH>;
+			label = "Red user LED";
+		};
+		led_com0: led_com0 {
+			gpios = <&shift_reg_gpios 13 GPIO_ACTIVE_HIGH>;
+		};
+		led_com1: led_com1 {
+			gpios = <&shift_reg_gpios 12 GPIO_ACTIVE_HIGH>;
+		};
+		led_underglow: led_underglow {
+			gpios = <&shift_reg_gpios 17 GPIO_ACTIVE_HIGH>;
+		};
+
+		led_io_0: led_io_0 {
+			gpios = <&shift_reg_gpios 24 GPIO_ACTIVE_LOW>;
+		};
+		led_io_1: led_io_1 {
+			gpios = <&shift_reg_gpios 25 GPIO_ACTIVE_LOW>;
+		};
+		led_io_2: led_io_2 {
+			gpios = <&shift_reg_gpios 26 GPIO_ACTIVE_LOW>;
+		};
+		led_io_3: led_io_3 {
+			gpios = <&shift_reg_gpios 27 GPIO_ACTIVE_LOW>;
+		};
+		led_io_4: led_io_4 {
+			gpios = <&shift_reg_gpios 28 GPIO_ACTIVE_HIGH>;
+		};
+		led_io_5: led_io_5 {
+			gpios = <&shift_reg_gpios 29 GPIO_ACTIVE_HIGH>;
+		};
+		led_io_6: led_io_6 {
+			gpios = <&shift_reg_gpios 10 GPIO_ACTIVE_LOW>;
+		};
+		led_io_7: led_io_7 {
+			gpios = <&shift_reg_gpios 9 GPIO_ACTIVE_LOW>;
+		};
+		led_io_8: led_io_8 {
+			gpios = <&shift_reg_gpios 8 GPIO_ACTIVE_LOW>;
+		};
+		led_io_9: led_io_9 {
+			gpios = <&shift_reg_gpios 4 GPIO_ACTIVE_LOW>;
+		};
+		led_io_10: led_io_10 {
+			gpios = <&shift_reg_gpios 5 GPIO_ACTIVE_LOW>;
+		};
+		led_io_11: led_io_11 {
+			gpios = <&shift_reg_gpios 6 GPIO_ACTIVE_LOW>;
+		};
+		led_io_12: led_io_12 {
+			gpios = <&shift_reg_gpios 7 GPIO_ACTIVE_LOW>;
+		};
+	};
+};
+
+&cpu0 {
+	clock-frequency = <DT_FREQ_M(120)>;
+};
+
+&sercom7 {
+	status = "okay";
+	compatible = "atmel,sam0-uart";
+	current-speed = <115200>;
+	rxpo = <1>;
+	txpo = <0>;
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pinctrl-0 = <&sercom7_uart_or_spi_default>;
+	pinctrl-names = "default";
+};
+
+&sercom0 {
+	status = "okay";
+	compatible = "atmel,sam0-uart";
+	current-speed = <115200>;
+	rxpo = <1>;
+	txpo = <0>;
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pinctrl-0 = <&sercom0_uart_or_spi_default>;
+	pinctrl-names = "default";
+};
+
+/* Configuration for sercom6 as a SPI controller used to control
+ * four linked 8-bit shift registers.
+ */
+&sercom6 {
+	status = "okay";
+	compatible = "atmel,sam0-spi";
+	dopo = <2>;
+	dipo = <2>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pinctrl-0 = <&sercom6_spi_default>;
+	pinctrl-names = "default";
+
+	cs-gpios = <&portb 2 GPIO_ACTIVE_LOW>;
+
+	shift_reg_gpios: shift_reg_gpios@0 {
+		status = "okay";
+		compatible = "ti,sn74hc595";
+		reset-value = <0x0f0007f0>;
+		enable-gpios = <&portb 1 GPIO_ACTIVE_LOW>;
+		ngpios = <32>;
+		reg = <0>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		spi-max-frequency = <DT_FREQ_M(25)>;
+	};
+};
+
+/* Ethernet config */
+&gmac {
+	status = "okay";
+
+	pinctrl-0 = <&gmac_rmii>;
+	pinctrl-names = "default";
+
+	phy-handle = <&phy>;
+};
+
+/* Ethernet config */
+&mdio {
+	status = "okay";
+
+	pinctrl-0 = <&mdio_default>;
+	pinctrl-names = "default";
+
+	phy: ethernet-phy@0 {
+		compatible = "ethernet-phy";
+		status = "okay";
+		reg = <0>;
+	};
+};
+
+/* The USB type-B port */
+zephyr_udc0: &usb0 {
+	status = "okay";
+
+	pinctrl-0 = <&usb_dc_default>;
+	pinctrl-names = "default";
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* This bootloader is provided by Microchip by default.
+		 * By default this section of flash is marked as "bootloader"
+		 * in the flash controller and cannot be written.
+		 */
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x0 0x00004000>;
+			read-only;
+		};
+
+		slot0_partition: partition@4000 {
+			label = "app-image";
+			reg = <0x00004000 0x0080000>;
+		};
+
+	};
+};
+
+#include <../boards/common/usb/cdc_acm_serial.dtsi>

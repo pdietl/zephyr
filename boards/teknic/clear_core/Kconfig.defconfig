@@ -1,0 +1,17 @@
+# Teknic ClearCore board configuration
+#
+# Copyright (c) 2025 Pete Dietl <petedietl@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+if BOARD_CLEAR_CORE
+
+if NETWORKING
+
+config NET_L2_ETHERNET
+	default y
+
+endif # NETWORKING
+
+source "boards/common/usb/Kconfig.cdc_acm_serial.defconfig"
+
+endif # BOARD_CLEAR_CORE
